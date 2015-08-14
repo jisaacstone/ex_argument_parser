@@ -1,5 +1,17 @@
 # ArgumentParser
 
+## Parser ##
+
+`ArgumentParser` is a struct with the following attributes:
+
+    :flags       | A list of Flag Arguments
+    :positional  | A list of Positional Arguments
+    :description | A string to print before generated help
+    :epilog      | A string to print after generated help
+    :prefix_char | Char preceding flag arguments. Default -
+    :add_help    | Print help when -h or --help is passed. Default true
+    :strict      | Throw an error when an unexpected argument is found Default false
+
 ## Arguments ##
 
 There are 2 types or arguments: positional and flag
@@ -101,9 +113,9 @@ String to print for this flag's entry in the generated help output
 
 ## Installation ##
 
-  1. Add argument_parser to your list of dependencies in mix.exs:
+Add argument_parser to your list of dependencies in mix.exs:
 
-        def deps do
-          [{:argument_parser, git: "git@github.com:jisaacstone/ex_argument_parser.git"}]
-        end
+    def deps do
+      [{:argument_parser, git: "git@github.com:jisaacstone/ex_argument_parser.git"}]
+    end
 
