@@ -5,15 +5,14 @@
 There are 2 types or arguments: positional and flag
 
 ### Flag Arguments ###
+
 Flag arguments are defined with a prefix char. The default is `-`.
-Flag arguments have as their first element a list of flags e.g. `[--foo, -f]`
-The name of a flag arg will be an atom derived from the longest flag name.
-For example the above list would generate a name of `:foo`
 Flags can be either long form `--flag` or single character alias `-f`
 Alias flags can be grouped: `-flag` == `-f -l -a -g`
 Grouping only works if flags take no args.
 
 ### Positional arguments ###
+
 Positional arguments have as their first element an atom which is their name
 Positional arguments will be consumed in the order they are defined.
 For example:
@@ -32,7 +31,7 @@ Valid actions are
     {:store_const, term}       | sets value to [term] when flag is present
     :store_true                | sets value to true when flag is present
     :store_false               | sets value to false when flag is present
-    :append                    | same as `:store`, but can use multiple times and storse as list
+    :append                    | same as `:store`, but can use multiple times and stores as list
     {:append, nargs}           | ''
     {:append, convert}         | ''
     {:append, nargs, convert}  | ''
@@ -40,6 +39,19 @@ Valid actions are
     :count                     | stores a count of # of times the flag is used
     :help                      | print help and exit
     {:version, version_sting}  | print version_sting and exit      
+
+examples:
+
+    iex>ArgumentParser.parse(~w[--tru --fls --cst],
+    ...> %ArgumentParser{flags: [[:tru, action: :store_true],
+    ...>                         [:fls, action: :store_false],
+    ...>                         [:cst, action: {:store_const, Foo}]])
+    %{tru: true, fls: false, cst: Foo}
+
+    iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
+    ...> %ArgumentParser{flags: [[:apnd, action: :append]],
+    ...>                 positional: [[:star, action: {:store, :*}]]})
+    %{apnd: ["foo", "bar"], star: ["one, "two"]}
 
 ### nargs ###
 
@@ -51,12 +63,21 @@ nargs can be:
     :'?'                | collect one argument if there is any left
     :remainder          | collect all remaining args regardless of type
 
-The default is 1
+actions `:store` and `:append` are the same as `{:store, 1}` and `{:append, 1}`
+
+    iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
+    ...> %ArgumentParser{flags: [[:apnd, action: :append]],
+    ...>                 positional: [[:rmdr, action: {:store, :remainder}]]})
+    %{apnd: ["foo"], rmdr: ["one, "two", "--apnd", "bar"]}
 
 ### convert ###
 
 Convert can be any function with an arity of 1.
 If nargs is 1 or :'?' a String will be passed, otherwise a list of String will be
+
+    iex>ArgumentParser.parse(["BADA55"],
+    ...> %ArgumentParser{positional: [[:hex, action: {:store, &String.to_integer(&1, 16)}]]})
+    %{hex: 12245589}
 
 ## Choices ##
 
@@ -69,6 +90,10 @@ If true an error will be thown if a value is not set. Defaults to false.
 ## Default ##
 
 Default value.
+
+    iex>ArgumentParser.parse([],
+    ...> %ArgumentParser{positional: [[:dft, default: :foo]]})
+    %{dft: :foo}
 
 ## Help ##
 

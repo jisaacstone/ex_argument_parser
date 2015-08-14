@@ -48,11 +48,55 @@ defmodule ArgumentParser do
   followed by an epilog.
   """
   def print_help(parser) do
-    (desc = Keyword.get(parser, :description)) && IO.puts(desc)
-    IO.inspect parser.flags
-    IO.inspect parser.positional
-    (epilog = Keyword.get(parser, :epilog)) && IO.puts(epilog)
+    IO.puts(parser.description)
+    IO.write("Usage: ")
+    unless parser.flags == [] do
+      IO.write(" [options]")
+    end
+    print_position_head(parser.positional)
+    Enum.map(parser.positional, &print_positional/1)
+    Enum.map(parser.flags, &print_flag(&1, parser.prefix_char))
+    IO.puts(parser.epilog)
     exit(:normal)
+  end
+
+  defp print_position_head([]) do
+    :ok
+  end
+  defp print_position_head([[name | options] | rest]) do
+    # TODO: metavars & nargs
+    if Keyword.get(options, :required) do
+      IO.write(" #{name}")
+    else
+      IO.write(" [#{name}]")
+    end
+    print_position_head(rest)
+  end
+
+  defp print_positional([name | options]) do
+    IO.write("\t#{name}")
+    print_arg_help(options)
+  end
+
+  defp print_flag([name | options], prefix) do
+    IO.write(<<?\t, prefix, prefix>> <> Atom.to_string(name))
+    if alias = Keyword.get(options, :alias) do
+      IO.write(<<?\s, prefix>> <> Atom.to_string(alias))
+    end
+    print_arg_help(options)
+  end
+
+  defp print_arg_help(options)
+    if choices = Keyword.get(options, :choices) do
+      IO.write(" one of #{inspect choices}")
+    end
+    if default = Keyword.get(options, :default) do
+      IO.write(" default: #{default}")
+    end
+    if help = Keyword.get(options, :help) do
+      IO.write(" #{help}")
+    end
+    IO.write("\n")
   end
 
   @doc ~S"""
@@ -62,16 +106,15 @@ defmodule ArgumentParser do
 
   There are 2 types or arguments: positional and flag
 
-  ###Flag Arguments###
+  ### Flag Arguments ###
+
   Flag arguments are defined with a prefix char. The default is `-`.
-  Flag arguments have as their first element a list of flags e.g. `[--foo, -f]`
-  The name of a flag arg will be an atom derived from the longest flag name.
-  For example the above list would generate a name of `:foo`
   Flags can be either long form `--flag` or single character alias `-f`
   Alias flags can be grouped: `-flag` == `-f -l -a -g`
   Grouping only works if flags take no args.
 
-  ###Positional arguments###
+  ### Positional arguments ###
+
   Positional arguments have as their first element an atom which is their name
   Positional arguments will be consumed in the order they are defined.
   For example:
@@ -83,54 +126,80 @@ defmodule ArgumentParser do
   
   Valid actions are
   
-    :store [default]           | collects one argument and sets as string
-    {:store, nargs}            | collects [nargs] arguments and sets as string
-    {:store, convert}          | collects one argument and applys [convert] to it
-    {:store, nargs, convert}   | collects [nargs] arguments and applys [convert] to them
-    {:store_const, term}       | sets value to [term] when flag is present
-    :store_true                | sets value to true when flag is present
-    :store_false               | sets value to false when flag is present
-    :append                    | same as `:store`, but can use multiple times and storse as list
-    {:append, nargs}           | ''
-    {:append, convert}         | ''
-    {:append, nargs, convert}  | ''
-    {:append_const, term, atom}| ''
-    :count                     | stores a count of # of times the flag is used
-    :help                      | print help and exit
-    {:version, version_sting}  | print version_sting and exit      
+      :store [default]           | collects one argument and sets as string
+      {:store, nargs}            | collects [nargs] arguments and sets as string
+      {:store, convert}          | collects one argument and applys [convert] to it
+      {:store, nargs, convert}   | collects [nargs] arguments and applys [convert] to them
+      {:store_const, term}       | sets value to [term] when flag is present
+      :store_true                | sets value to true when flag is present
+      :store_false               | sets value to false when flag is present
+      :append                    | same as `:store`, but can use multiple times and stores as list
+      {:append, nargs}           | ''
+      {:append, convert}         | ''
+      {:append, nargs, convert}  | ''
+      {:append_const, term, atom}| ''
+      :count                     | stores a count of # of times the flag is used
+      :help                      | print help and exit
+      {:version, version_sting}  | print version_sting and exit      
+
+  examples:
+
+      iex>ArgumentParser.parse(~w[--tru --fls --cst],
+      ...> %ArgumentParser{flags: [[:tru, action: :store_true],
+      ...>                         [:fls, action: :store_false],
+      ...>                         [:cst, action: {:store_const, Foo}]])
+      %{tru: true, fls: false, cst: Foo}
+
+      iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
+      ...> %ArgumentParser{flags: [[:apnd, action: :append]],
+      ...>                 positional: [[:star, action: {:store, :*}]]})
+      %{apnd: ["foo", "bar"], star: ["one, "two"]}
 
   ### nargs ###
 
   nargs can be:
 
-    postitive integer N | collect the next [N] arguments
-    :*                  | collect remaining arguments until a flag argument in encountered
-    :+                  | same as :* but thows an error if no arguments are collected
-    :'?'                | collect one argument if there is any left
-    :remainder          | collect all remaining args regardless of type
+      postitive integer N | collect the next [N] arguments
+      :*                  | collect remaining arguments until a flag argument in encountered
+      :+                  | same as :* but thows an error if no arguments are collected
+      :'?'                | collect one argument if there is any left
+      :remainder          | collect all remaining args regardless of type
   
-  The default is 1
+  actions `:store` and `:append` are the same as `{:store, 1}` and `{:append, 1}`
+
+      iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
+      ...> %ArgumentParser{flags: [[:apnd, action: :append]],
+      ...>                 positional: [[:rmdr, action: {:store, :remainder}]]})
+      %{apnd: ["foo"], rmdr: ["one, "two", "--apnd", "bar"]}
 
   ### convert ###
 
-    Convert can be any function with an arity of 1.
-    If nargs is 1 or :'?' a String will be passed, otherwise a list of String will be
+  Convert can be any function with an arity of 1.
+  If nargs is 1 or :'?' a String will be passed, otherwise a list of String will be
+
+      iex>ArgumentParser.parse(["BADA55"],
+      ...> %ArgumentParser{positional: [[:hex, action: {:store, &String.to_integer(&1, 16)}]]})
+      %{hex: 12245589}
 
   ## Choices ##
 
-    A list of terms. If an argument is passed that does not match the coices an error will be thrown
+  A list of terms. If an argument is passed that does not match the coices an error will be thrown
 
   ## Required ##
 
-    If true an error will be thown if a value is not set. Defaults to false.
+  If true an error will be thown if a value is not set. Defaults to false.
 
   ## Default ##
 
-    Default value.
+  Default value.
+
+      iex>ArgumentParser.parse([],
+      ...> %ArgumentParser{positional: [[:dft, default: :foo]]})
+      %{dft: :foo}
 
   ## Help ##
    
-    String to print for this flag's entry in the generated help output
+  String to print for this flag's entry in the generated help output
 
   """
 
