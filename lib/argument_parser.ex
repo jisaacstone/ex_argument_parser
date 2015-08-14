@@ -86,7 +86,7 @@ defmodule ArgumentParser do
     print_arg_help(options)
   end
 
-  defp print_arg_help(options)
+  defp print_arg_help(options) do
     if choices = Keyword.get(options, :choices) do
       IO.write(" one of #{inspect choices}")
     end
@@ -147,13 +147,13 @@ defmodule ArgumentParser do
       iex>ArgumentParser.parse(~w[--tru --fls --cst],
       ...> %ArgumentParser{flags: [[:tru, action: :store_true],
       ...>                         [:fls, action: :store_false],
-      ...>                         [:cst, action: {:store_const, Foo}]])
+      ...>                         [:cst, action: {:store_const, Foo}]]})
       %{tru: true, fls: false, cst: Foo}
 
       iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
       ...> %ArgumentParser{flags: [[:apnd, action: :append]],
       ...>                 positional: [[:star, action: {:store, :*}]]})
-      %{apnd: ["foo", "bar"], star: ["one, "two"]}
+      %{apnd: ["bar", "foo"], star: ["one", "two"]}
 
   ### nargs ###
 
@@ -170,7 +170,7 @@ defmodule ArgumentParser do
       iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
       ...> %ArgumentParser{flags: [[:apnd, action: :append]],
       ...>                 positional: [[:rmdr, action: {:store, :remainder}]]})
-      %{apnd: ["foo"], rmdr: ["one, "two", "--apnd", "bar"]}
+      %{apnd: ["foo"], rmdr: ["one", "two", "--apnd", "bar"]}
 
   ### convert ###
 
