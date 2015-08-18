@@ -5,18 +5,28 @@ defmodule ArgumentParser do
     epilog: "",
     prefix_char: ?-,
     add_help: true,
-    strict: false
+    strict: true
 
-  @type t :: %ArgumentParser{}
+  @type t :: %__MODULE__{
+    flags: [argument],
+    positional: [argument],
+    description: String.t,
+    epilog: String.t,
+    prefix_char: char,
+    add_help: boolean,
+    strict: boolean}
 
-  @type argument :: [
-    alias: atom,
-    action: action,
-    choices: term,
-    required: boolean,
-    default: term,
-    help: String.t,
-    metavar: atom]
+  @type argument :: [argument_option]
+
+  @type argument_option :: 
+    atom |
+    {:alias, atom} |
+    {:action, action} |
+    {:choices, term} |
+    {:required, boolean} |
+    {:default, term} |
+    {:help, String.t} |
+    {:metavar, atom}
 
   @type action :: 
     :store |
@@ -47,6 +57,7 @@ defmodule ArgumentParser do
   followed by a generated description of all arguments
   followed by an epilog.
   """
+  @spec print_help(t) :: term
   def print_help(parser) do
     IO.puts(parser.description)
     IO.write("Usage: ")
@@ -54,8 +65,15 @@ defmodule ArgumentParser do
       IO.write(" [options]")
     end
     print_position_head(parser.positional)
+    IO.puts("\n-------------------- POSITIONAL ARGUMENTS ---------------------")
     Enum.map(parser.positional, &print_positional/1)
+    IO.puts("\n--------------------         FLAGS        ---------------------")
     Enum.map(parser.flags, &print_flag(&1, parser.prefix_char))
+    if parser.add_help do
+      print_flag(
+        [:help, alias: :h, action: :help, help: "Display this message and exit"],
+        parser.prefix_char)
+    end
     IO.puts(parser.epilog)
     exit(:normal)
   end
@@ -64,13 +82,37 @@ defmodule ArgumentParser do
     :ok
   end
   defp print_position_head([[name | options] | rest]) do
-    # TODO: metavars & nargs
-    if Keyword.get(options, :required) do
-      IO.write(" #{name}")
+    mv = print_metavars(
+      Keyword.get(options, :action, :store),
+      Keyword.get(options, :metavar, String.upcase(Atom.to_string(name))))
+    if options[:required] do
+      IO.write(" #{name} #{mv}")
     else
-      IO.write(" [#{name}]")
+      IO.write(" [ #{name} #{mv} ]")
     end
     print_position_head(rest)
+  end
+
+  defp print_metavars(atom, mv) when atom in [:store, :append] do
+    mv
+  end
+  defp print_metavars(t, mv) when is_tuple(t) do
+    print_metavars(elem(t, 1), mv)
+  end
+  defp print_metavars(n, mv) when is_number(n) do
+    (for _ <- 1..n, do: "#{mv }") |> Enum.join
+  end
+  defp print_metavars(:*, mv) do
+    "[#{mv} ...] "
+  end
+  defp print_metavars(:+, mv) do
+    "#{mv} [#{mv} ...] "
+  end
+  defp print_metavars(:'?', mv) do
+    "[#{mv}] "
+  end
+  defp print_metavars(_, _) do
+    ""
   end
 
   defp print_positional([name | options]) do
@@ -202,7 +244,6 @@ defmodule ArgumentParser do
   String to print for this flag's entry in the generated help output
 
   """
-
   @spec parse([String.t], t) :: %{}
   def parse(args, parser) do
     parse(args, parser, %{}) |>
