@@ -1,5 +1,23 @@
 # ArgumentParser
 
+Tool for accepting command-line arguments, intended to be functionally similar to python's argparse
+
+Main functions:
+
+    print_help(%ArgumentParser{}, opts \\ [])
+
+Will print a helpful message on how to use the tool. Most of it is generated based on the `:flags`
+and `:positional` arguments of the `ArgumentParser` struct. Will exit after printing if `exit: true` is passed.
+
+    parse([argument list], %ArgumentParser{})
+
+Will attempt to parse the aruments. If sucessful it will return a dict with the parsed args. If unsuccessful it
+will return an {:error, message} tuple.
+
+    parse!([argument list], %ArgumentParser{})
+
+Same as above except if unsuccessful it will print the error message and help message, then exit.
+
 ## Parser ##
 
 `ArgumentParser` is a struct with the following attributes:
@@ -11,6 +29,7 @@
     :prefix_char | Char preceding flag arguments. Default -
     :add_help    | Print help when -h or --help is passed. Default true
     :strict      | Throw an error when an unexpected argument is found Default false
+    :exit        | boolean, should we exit if encountering an error or help flag?
 
 ## Arguments ##
 
@@ -29,8 +48,10 @@ Positional arguments have as their first element an atom which is their name
 Positional arguments will be consumed in the order they are defined.
 For example:
 
+```elixir
     iex>ArgumentParser.parse(["foo", "bar"], %ArgumentParser{positional: [[:one], [:two]]})
     %{one: "foo", two: "bar"}
+```
 
 ## Actions ##
 
@@ -54,6 +75,7 @@ Valid actions are
 
 examples:
 
+```elixir
     iex>ArgumentParser.parse(~w[--tru --fls --cst],
     ...> %ArgumentParser{flags: [[:tru, action: :store_true],
     ...>                         [:fls, action: :store_false],
@@ -64,6 +86,7 @@ examples:
     ...> %ArgumentParser{flags: [[:apnd, action: :append]],
     ...>                 positional: [[:star, action: {:store, :*}]]})
     %{apnd: ["foo", "bar"], star: ["one, "two"]}
+```
 
 ### nargs ###
 
@@ -77,19 +100,23 @@ nargs can be:
 
 actions `:store` and `:append` are the same as `{:store, 1}` and `{:append, 1}`
 
+```elixir
     iex>ArgumentParser.parse(~w[--apnd foo one two --apnd bar],
     ...> %ArgumentParser{flags: [[:apnd, action: :append]],
     ...>                 positional: [[:rmdr, action: {:store, :remainder}]]})
     %{apnd: ["foo"], rmdr: ["one, "two", "--apnd", "bar"]}
+```
 
 ### convert ###
 
 Convert can be any function with an arity of 1.
 If nargs is 1 or :'?' a String will be passed, otherwise a list of String will be
 
+```elixir
     iex>ArgumentParser.parse(["BADA55"],
     ...> %ArgumentParser{positional: [[:hex, action: {:store, &String.to_integer(&1, 16)}]]})
     %{hex: 12245589}
+```
 
 ## Choices ##
 
@@ -103,9 +130,11 @@ If true an error will be thown if a value is not set. Defaults to false.
 
 Default value.
 
+```elixir
     iex>ArgumentParser.parse([],
     ...> %ArgumentParser{positional: [[:dft, default: :foo]]})
     %{dft: :foo}
+```
 
 ## Help ##
 
@@ -115,7 +144,9 @@ String to print for this flag's entry in the generated help output
 
 Add argument_parser to your list of dependencies in mix.exs:
 
-    def deps do
-      [{:argument_parser, git: "git@github.com:jisaacstone/ex_argument_parser.git"}]
-    end
+```elixir
+  def deps do
+    [{:argument_parser, git: "git@github.com:jisaacstone/ex_argument_parser.git"}]
+  end
+```
 
