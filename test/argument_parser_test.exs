@@ -15,9 +15,10 @@ defmodule ArgumentParserTest do
 
   test "nargs" do
     flags = [
-      [:three, action: {:store, 3}],
-      [:star,  action: {:store, :*}],
-      [:plus,  action: {:store, :+}]]
+      [:three,  action: {:store, 3}],
+      [:star,   action: {:store, :*}],
+      [:plus,   action: {:store, :+}],
+      [:remain, action: {:store, :remainder}]]
     parser = %ArgumentParser{flags: flags}
 
     parsed = ArgumentParser.parse(~w[--three baz bar biz], parser)
@@ -28,6 +29,9 @@ defmodule ArgumentParserTest do
 
     parsed = ArgumentParser.parse(~w[--plus baz bar], parser)
     assert(parsed == %{plus: ["baz", "bar"]})
+
+    parsed = ArgumentParser.parse(~w[--star one --remain two --plus three], parser)
+    assert(parsed == %{star: ["one"], remain: ["two", "--plus", "three"]})
   end
 
   test "convert" do

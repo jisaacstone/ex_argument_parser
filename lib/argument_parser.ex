@@ -5,7 +5,8 @@ defmodule ArgumentParser do
     epilog: "",
     prefix_char: ?-,
     add_help: true,
-    strict: true
+    strict: true,
+    exit: false
 
   @type t :: %__MODULE__{
     flags: [argument],
@@ -14,7 +15,8 @@ defmodule ArgumentParser do
     epilog: String.t,
     prefix_char: char,
     add_help: boolean,
-    strict: boolean}
+    strict: boolean,
+    exit: boolean}
 
   @type argument :: [argument_option]
 
@@ -58,7 +60,7 @@ defmodule ArgumentParser do
   followed by an epilog.
   """
   @spec print_help(t) :: term
-  def print_help(parser) do
+  def print_help(parser, opts \\ []) do
     IO.puts(parser.description)
     IO.write("Usage: ")
     unless parser.flags == [] do
@@ -75,7 +77,7 @@ defmodule ArgumentParser do
         parser.prefix_char)
     end
     IO.puts(parser.epilog)
-    exit(:normal)
+    if opts[:exit], do: exit(:normal)
   end
 
   defp print_position_head([]) do
@@ -143,7 +145,7 @@ defmodule ArgumentParser do
 
   @doc ~S"""
   Parse arguments according to the passed ArgumentParser
- 
+
   ## Arguments ##
 
   There are 2 types or arguments: positional and flag
@@ -246,21 +248,36 @@ defmodule ArgumentParser do
   """
   @spec parse([String.t], t) :: %{}
   def parse(args, parser) do
-    parse(args, parser, %{}) |>
-      check_arguments(parser)
+    try do
+      parse(args, parser, %{}) |>
+        check_arguments(parser)
+    catch
+      {:error, _} = error -> error
+    end
   end
+
+  def parse!(args, parser) do
+    case parse(args, parser) do
+      {:error, message} ->
+        IO.puts(message)
+        print_help(parser, exit: parser.exit)
+      result ->
+        result
+    end
+  end
+    
   defp parse([], _parser, parsed) do
     parsed
   end
   # -h
-  defp parse([<<pc, ?h>> | _],
+  defp parse([<<pc, ?h>> | parser],
              %{add_help: true, prefix_char: pc} = parser, _) do
-    print_help(parser)
+    print_help(parser, exit: parser.exit)
   end
   # --help
   defp parse([<<pc, pc, ?h, ?e, ?l, ?p>> | _],
              %{add_help: true, prefix_char: pc} = parser, _) do
-    print_help(parser)
+    print_help(parser, exit: parser.exit)
   end
   # --[flag]
   defp parse([<<pc, pc, arg :: binary>> | rest],
@@ -288,7 +305,7 @@ defmodule ArgumentParser do
   # unexpected positional arg
   defp parse([head | tail], parser, parsed) do
     if parser.strict do
-      exit_bad_args("Unexpected argument #{head}")
+      throw{:error, "unexpected argument: #{head}"}
     else
       parse(tail, parser, Dict.put(parsed, String.to_atom(head), true))
     end
@@ -315,7 +332,7 @@ defmodule ArgumentParser do
           action == :store_false ->
             Dict.put_new(parsed, key, true)
           Keyword.get(argument, :required) ->
-            exit_bad_args("missing required arg #{key}")
+            throw{:error, "missing required arg #{key}"}
           true ->
             parsed
         end
@@ -329,7 +346,7 @@ defmodule ArgumentParser do
     get_flag(name, arguments, strict, &Keyword.get(&1, :alias))
   end
   defp get_flag(ident, [], true, _) do
-    exit_bad_args("invalid flag: #{ident}")
+    throw{:error, "unexpected flag: #{ident}"}
   end
   defp get_flag(ident, [], false, _) do
     [ident]
@@ -361,11 +378,6 @@ defmodule ArgumentParser do
     end
   end
 
-  defp exit_bad_args(message) do
-    IO.puts(message)
-    exit(:normal)
-  end
-
   defp key_for([name | _]) when is_atom(name) do
     name
   end
@@ -388,7 +400,7 @@ defmodule ArgumentParser do
       parser)
     if choices = Keyword.get(argument, :choices) do
       if not (actual = Dict.get(parsed, key)) in choices do
-        exit_bad_args("value for #{key} should be in #{inspect(choices)}, got #{actual}")
+        throw{:error, "value for #{key} should be in #{inspect(choices)}, got #{actual}"}
       end
     end
     {args, parsed}
@@ -397,7 +409,7 @@ defmodule ArgumentParser do
   defp apply_action(action, _, key, %{key: _}, _)
   when (is_atom(action) and action != :append)
   or (is_tuple(action) and not elem(action, 0) in [:append, :append_const]) do
-    exit_bad_args("duplicate key #{key}")
+    throw{:error, "duplicate key #{key}"}
   end
   defp apply_action(:store, [head | args], key, parsed, _parser) do
     {args, Dict.put(parsed, key, head)}
@@ -456,7 +468,7 @@ defmodule ArgumentParser do
     {args, Dict.update(parsed, key, 1, &(&1 + 1))}
   end
   defp apply_action(:help, _, _, _, parser) do
-    print_help(parser)
+    print_help(parser, exit: parser.exit)
   end
   defp apply_action({:version, version}, _, _, _, _) do
     IO.puts(version)
@@ -474,7 +486,7 @@ defmodule ArgumentParser do
   end
   defp fetch_nargs(args, :+, parser) do
     case Enum.split_while(args, &(not is_flag(&1, parser.prefix_char))) do
-      {[], _} -> exit_bad_args("Missing value")
+      {[], _} -> throw{:error, "Missing value"}
       result  -> result
     end
   end
