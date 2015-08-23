@@ -1,5 +1,7 @@
 /_build
 /cover
 /deps
+*.beam
+*.swp
 erl_crash.dump
 *.ez
