@@ -3,13 +3,13 @@ defmodule ArgumentParserTest do
   doctest ArgumentParser
 
   test "positional" do
-    parser = %ArgumentParser{positional: [[:foo]]}
-    assert(ArgumentParser.parse(["bar"], parser) == %{foo: "bar"})
+    parser = ArgumentParser.new(positional: [[:foo]])
+    assert(ArgumentParser.parse(parser, ["bar"]) == {:ok, %{foo: "bar"}})
   end
 
   test "flags" do
-    parser = %ArgumentParser{flags: [[:foo, alias: :f], [:bar, alias: :b]]}
-    parsed = ArgumentParser.parse(~w[-f baz --bar biz], parser)
+    parser = ArgumentParser.new(flags: [[:foo, alias: :f], [:bar, alias: :b]])
+    {:ok, parsed} = ArgumentParser.parse(parser, ~w[-f baz --bar biz])
     assert(parsed == %{foo: "baz", bar: "biz"})
   end
 
@@ -19,26 +19,26 @@ defmodule ArgumentParserTest do
       [:star,   action: {:store, :*}],
       [:plus,   action: {:store, :+}],
       [:remain, action: {:store, :remainder}]]
-    parser = %ArgumentParser{flags: flags}
+    parser = ArgumentParser.new(flags: flags)
 
-    parsed = ArgumentParser.parse(~w[--three baz bar biz], parser)
+    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--three baz bar biz])
     assert(parsed == %{three: ["baz", "bar", "biz"]})
 
-    parsed = ArgumentParser.parse(~w[--star baz bar], parser)
+    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--star baz bar])
     assert(parsed == %{star: ["baz", "bar"]})
 
-    parsed = ArgumentParser.parse(~w[--plus baz bar], parser)
+    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--plus baz bar])
     assert(parsed == %{plus: ["baz", "bar"]})
 
-    parsed = ArgumentParser.parse(~w[--star one --remain two --plus three], parser)
+    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--star one --remain two --plus three])
     assert(parsed == %{star: ["one"], remain: ["two", "--plus", "three"]})
   end
 
   test "convert" do
     args = [[:hex,   action: {:store, &String.to_integer(&1, 16)}],
             [:atoms, action: {:store, :*, &String.to_atom/1}]]
-    parser = %ArgumentParser{positional: args}
-    parsed = ArgumentParser.parse(~w[539 one two], parser)
+    parser = ArgumentParser.new(positional: args)
+    {:ok, parsed} = ArgumentParser.parse(parser, ~w[539 one two])
     assert(parsed == %{hex: 1337, atoms: [:one, :two]})
   end
 
@@ -50,8 +50,8 @@ defmodule ArgumentParserTest do
       [:store_true_unset,  alias: :x, action: :store_true],
       [:store_false_unset, alias: :y, action: :store_false],
       [:store_const_unset, alias: :z, action: {:store_const, :no}]]
-    parser = %ArgumentParser{flags: flags}
-    parsed = ArgumentParser.parse(["-tcf"], parser)
+    parser = ArgumentParser.new(flags: flags)
+    {:ok, parsed} = ArgumentParser.parse(parser, ["-tcf"])
     assert(parsed == %{store_true_set:    true,
                        store_true_unset:  false,
                        store_false_set:   false,
@@ -60,14 +60,14 @@ defmodule ArgumentParserTest do
   end
 
   test "default" do
-    parser = %ArgumentParser{flags: [[:foo, default: :barbeque]]}
-    assert(ArgumentParser.parse([], parser) == %{foo: :barbeque})
+    parser = ArgumentParser.new(flags: [[:foo, default: :barbeque]])
+    assert(ArgumentParser.parse(parser, []) == {:ok, %{foo: :barbeque}})
   end
 
   test "count" do
-    parser = %ArgumentParser{flags: [[:count, alias: :c, action: :count]]}
-    assert(ArgumentParser.parse([], parser) == %{count: 0})
-    assert(ArgumentParser.parse(["--count"], parser) == %{count: 1})
-    assert(ArgumentParser.parse(["-ccc"], parser) == %{count: 3})
+    parser = ArgumentParser.new(flags: [[:count, alias: :c, action: :count]])
+    assert(ArgumentParser.parse(parser, []) == {:ok, %{count: 0}})
+    assert(ArgumentParser.parse(parser, ["--count"]) == {:ok, %{count: 1}})
+    assert(ArgumentParser.parse(parser, ["-ccc"]) == {:ok, %{count: 3}})
   end
 end
