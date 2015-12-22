@@ -18,6 +18,8 @@ defmodule ArgumentParser.Mixfile do
   end
 
   def deps do
-    [ {:dialyze, "~> 0.2"} ]
+    [ {:dialyze, "~> 0.2", only: :dev},
+      {:earmark, "~> 0.1", only: :dev}, # markdown parser
+      {:ex_doc, "~> 0.11", only: :dev} ]
   end
 end

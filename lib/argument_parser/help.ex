@@ -1,4 +1,7 @@
 defmodule ArgumentParser.Help do
+  @moduledoc :false
+
+  @doc :false
   def describe(%ArgumentParser{} = parser) do
     """
     #{parser.description}

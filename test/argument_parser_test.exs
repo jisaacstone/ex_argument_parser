@@ -70,4 +70,7 @@ defmodule ArgumentParserTest do
     assert(ArgumentParser.parse(parser, ["--count"]) == {:ok, %{count: 1}})
     assert(ArgumentParser.parse(parser, ["-ccc"]) == {:ok, %{count: 3}})
   end
+
+  test "help" do
+    ArgumentParser.new(
 end
