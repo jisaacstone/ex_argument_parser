@@ -122,7 +122,7 @@ defmodule ArgumentParser do
       iex> ArgumentParser.new() |>
       iex>   ArgumentParser.add_arg([:foo, choices: ["a", "b", "c"]]) |>
       iex>   ArgumentParser.parse(["foo", "x"], :false)
-      {:error, "value for foo should be one of [\"a\", \"b\", \"c\"], got foo"}
+      {:error, "value for foo should be one of [\\"a\\", \\"b\\", \\"c\\"], got foo"}
 
   ## Required <a name="required"></a>
 

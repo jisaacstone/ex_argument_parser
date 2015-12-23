@@ -29,10 +29,11 @@ defmodule ArgumentParser.Help do
   defp print_position_head([]) do
     []
   end
-  defp print_position_head([[name | options] | rest]) do
+  defp print_position_head([[name_a | options] | rest]) do
+    name = Atom.to_string(name_a)
     mv = print_metavars(
       Keyword.get(options, :action, :store),
-      Keyword.get(options, :metavar, String.upcase(Atom.to_string(name))))
+      Keyword.get(options, :metavar, String.upcase(name)))
     text = if options[:required] do
       [name, mv, " "]
     else
