@@ -41,7 +41,7 @@ defmodule ArgumentParser do
   Alias flags can be grouped: `-flag` == `-f -l -a -g`
   Grouping only works if flags take no args.
 
-  ### Positional arguments ###
+  ### Positional Arguments ###
 
   Positional arguments have as their first element an atom which is their name
   Positional arguments will be consumed in the order they are defined.
@@ -114,23 +114,23 @@ defmodule ArgumentParser do
       ...>   ArgumentParser.parse(["BADA55"])
       {:ok, %{hex: 12245589}}
 
-  ## Choices <a name="choices"></a>
+  ### choices <a name="choices"></a>
 
   A list of terms. If an argument is passed that does not match the coices an
   error will be returned.
 
       iex> ArgumentParser.new() |>
-      iex>   ArgumentParser.add_arg([:foo, choices: ["a", "b", "c"]]) |>
-      iex>   ArgumentParser.parse(["foo", "x"], :false)
+      ...>   ArgumentParser.add_arg([:foo, choices: ["a", "b", "c"]]) |>
+      ...>   ArgumentParser.parse(["foo", "x"], :false)
       {:error, "value for foo should be one of [\\"a\\", \\"b\\", \\"c\\"], got foo"}
 
-  ## Required <a name="required"></a>
+  ### required <a name="required"></a>
 
   If true an error will be thown if a value is not set. Defaults to false.
 
   __flags only__
 
-  ## Default <a name="default"></a>
+  ### default <a name="default"></a>
 
   Default value. 
 
@@ -138,7 +138,7 @@ defmodule ArgumentParser do
       ...>   ArgumentParser.parse([])
       {:ok, %{dft: :foo}}
 
-  ## Help <a name="help">
+  ### help <a name="help">
    
   String to print for this flag's entry in the generated help output
 

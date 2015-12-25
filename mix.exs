@@ -3,11 +3,12 @@ defmodule ArgumentParser.Mixfile do
 
   def project do
     [app: :argument_parser,
-     version: "0.0.2",
-     elixir: "~> 1.1-dev",
+     version: "0.1.0",
+     elixir: "~> 1.1",
      package: package,
-     name: "ArgumentParserEx",
+     name: "ArgumentParser",
      source_url: "https://github.com/jisaacstone/ex_argument_parser",
+     description: "More powerful argument parser for creating nice scripts",
      deps: deps]
   end
 
@@ -16,8 +17,9 @@ defmodule ArgumentParser.Mixfile do
   end
 
   defp package do
-   [licenses: ["Apache 2.0"],
-    links: %{"GitHub" => "https://github.com/jisaacstone/ex_argument_parser"}]
+   [ licenses: ["Apache 2.0"],
+     maintainers: ["jisaacstone"],
+     links: %{"GitHub" => "https://github.com/jisaacstone/ex_argument_parser"} ]
   end
 
   def deps do

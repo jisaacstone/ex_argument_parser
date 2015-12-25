@@ -3,6 +3,7 @@
 * [Description](#description)
 * [Types](#types)
 * [Functions](#functions)
+* [Builder](#builder)
 
 ## Description <a name="description"></a>
 
@@ -47,7 +48,7 @@ Flags can be either long form `--flag` or single character alias `-f`
 Alias flags can be grouped: `-flag` == `-f -l -a -g`
 Grouping only works if flags take no args.
 
-### Positional arguments ###
+### Positional Arguments ###
 
 Positional arguments have as their first element an atom which is their name
 Positional arguments will be consumed in the order they are defined.
@@ -120,7 +121,7 @@ If nargs is 1 or :'?' a String will be passed, otherwise a list of String will b
     ...>   ArgumentParser.parse(["BADA55"])
     {:ok, %{hex: 12245589}}
 
-## Choices <a name="choices"></a>
+### choices <a name="choices"></a>
 
 A list of terms. If an argument is passed that does not match the coices an
 error will be returned.
@@ -130,13 +131,13 @@ error will be returned.
     iex>   ArgumentParser.parse(["foo", "x"], :false)
     {:error, "value for foo should be one of ["a", "b", "c"], got foo"}
 
-## Required <a name="required"></a>
+### required <a name="required"></a>
 
 If true an error will be thown if a value is not set. Defaults to false.
 
 __flags only__
 
-## Default <a name="default"></a>
+### default <a name="default"></a>
 
 Default value. 
 
@@ -144,7 +145,7 @@ Default value.
     ...>   ArgumentParser.parse([])
     {:ok, %{dft: :foo}}
 
-## Help <a name="help">
+### help <a name="help">
  
 String to print for this flag's entry in the generated help output
 
@@ -259,3 +260,50 @@ example:
                     prefix_char: ?-, epilog: "",
                     flags: [],
                     positional: [[:foo, required: :false, action: :store_true]]}
+
+
+# ArgumentParser.Builder <a name="builder"></a>
+
+Utility for easily creating modules that parse args using ArgumentParser.
+
+`@arg` and `@flag` attributes can be used to define arguments similar to
+the `add_flag/2` and `add_arg/2` functions.
+
+Will create a private `parse` function.
+
+The first argument to the parser function should be a list of binarys.
+the second option is the `print_and_exit` flag, which defaults to `:true`.
+
+    parse([binary], :true) :: {:ok, Map.t}
+    parse([binary], :false) :: {:ok, Map.t} | {:error, term} | {:message,
+      iodata}
+
+When the `print_and_exit` flag is `:true` messages and errors will be printed
+to stdout and the process will exit.
+
+ArgumentParser options can be passed in the `use` options.
+
+    use ArgumentParser.Builder, add_help: :false, strict: :true
+
+If `:description` is not passed the `@shortdoc` or `@moduledoc` will be used
+if present.
+
+Example:
+
+    defmodule Script.Example do
+      use ArgumentParser.Builder
+      @arg [:name]
+      @flag [:bar, alias: :b, help: "get some beer at the bar"]
+
+      def run(args) do
+        {:ok, parsed} = parse(args)
+        main(parsed)
+      end
+
+      def main(%{name: "Homer"}) do
+        IO.puts("No Homers!")
+      end
+      def main(%{name: name, bar: bar}) do
+        IO.puts("Hey #{name} let's go to #{bar}!")
+      end
+    end
