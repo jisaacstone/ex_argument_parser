@@ -289,21 +289,22 @@ If `:description` is not passed the `@shortdoc` or `@moduledoc` will be used
 if present.
 
 Example:
+```elixir
+defmodule Script.Example do
+  use ArgumentParser.Builder
+  @arg [:name]
+  @flag [:bar, alias: :b, help: "get some beer at the bar"]
 
-    defmodule Script.Example do
-      use ArgumentParser.Builder
-      @arg [:name]
-      @flag [:bar, alias: :b, help: "get some beer at the bar"]
+  def run(args) do
+    {:ok, parsed} = parse(args)
+    main(parsed)
+  end
 
-      def run(args) do
-        {:ok, parsed} = parse(args)
-        main(parsed)
-      end
-
-      def main(%{name: "Homer"}) do
-        IO.puts("No Homers!")
-      end
-      def main(%{name: name, bar: bar}) do
-        IO.puts("Hey #{name} let's go to #{bar}!")
-      end
-    end
+  def main(%{name: "Homer"}) do
+    IO.puts("No Homers!")
+  end
+  def main(%{name: name, bar: bar}) do
+    IO.puts("Hey #{name} let's go to #{bar}!")
+  end
+end
+```
