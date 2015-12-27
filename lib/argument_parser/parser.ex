@@ -6,6 +6,14 @@ defmodule ArgumentParser.Parser do
 
   @type result :: {:ok, Map.t} | {:error, term} | {:message, binary}
 
+  defmacrop list_action?(action) do
+    quote do
+      (unquote(action) == :append) or is_tuple(unquote(action)) and
+      (:erlang.element(1, unquote(action)) == :append or
+       :erlang.element(2, unquote(action)) == :*)
+    end
+  end
+
   @doc :false
   @spec parse([String.t], AP.t) :: result
   def parse(args, %AP{} = parser) when is_list(args) do
@@ -28,24 +36,34 @@ defmodule ArgumentParser.Parser do
     {:error, reason}
   end
   defp check_argument({argument, key}, {:ok, parsed}) do
-    case Keyword.fetch(argument, :default) do
-      {:ok, value} -> {:ok, Dict.put_new(parsed, key, value)}
-      :error ->
-        action = Keyword.get(argument, :action)
-        cond do
-          action == :count ->
-            {:ok, Dict.put_new(parsed, key, 0)}
-          action == :store_true ->
-            {:ok, Dict.put_new(parsed, key, false)}
-          action == :store_false ->
-            {:ok, Dict.put_new(parsed, key, true)}
-          Keyword.get(argument, :required) ->
-            {:error, "missing required arg #{key}"}
-          true ->
-            {:ok, parsed}
-        end
+    if Dict.has_key?(parsed, key) do
+      {:ok, parsed}
+    else
+      get_default(argument, key, parsed)
     end
   end
+
+  defp get_default(argument, key, parsed) do
+    default = case Keyword.fetch(argument, :default) do
+      {:ok, value} -> value
+      :error -> default_by_action(Dict.get(argument, :action))
+    end
+    if (default == :none) do
+      if Keyword.get(argument, :required) do
+        {:error, "missing required arg #{key}"}
+      else
+        {:ok, parsed}
+      end
+    else
+      {:ok, Dict.put(parsed, key, default)}
+    end
+  end
+
+  defp default_by_action(:count), do: 0
+  defp default_by_action(:store_true), do: :false
+  defp default_by_action(:store_false), do: :true
+  defp default_by_action(action) when list_action?(action), do: []
+  defp default_by_action(_), do: :none
 
   defp key_for([name | _]) when is_atom(name) do
     name
@@ -171,19 +189,19 @@ defmodule ArgumentParser.Parser do
     {:ok, args, Dict.put_new(parsed, key, const)}
   end
   defp apply_action(:append, [head | args], key, parsed, _parser) do
-    {:ok, args, Dict.update(parsed, key, [head], &([head | &1]))}
+    {:ok, args, Dict.update(parsed, key, [head], &(&1 ++ [head]))}
   end
   defp apply_action({:append, f}, [head | args], key, parsed, _parser)
   when is_function(f) do
     value = f.(head)
-    {:ok, args, Dict.update(parsed, key, [value], &([value | &1]))}
+    {:ok, args, Dict.update(parsed, key, [value], &(&1 ++ [value]))}
   end
   defp apply_action({:append, n}, args, key, parsed, parser)
   when is_number(n) or n in @narg_atoms do
     case fetch_nargs(args, n, parser) do
       {:error, reason} -> {:error, reason}
       {value, rest} ->
-        {:ok, rest, Dict.update(parsed, key, [value], &([value | &1]))}
+        {:ok, rest, Dict.update(parsed, key, [value], &(&1 ++ [value]))}
     end
   end
   defp apply_action({:append, n, f}, args, key, parsed, parser)
@@ -191,7 +209,7 @@ defmodule ArgumentParser.Parser do
     case fetch_nargs(args, n, parser) do
       {:error, reason} -> {:error, reason}
       {value, rest} ->
-        {:ok, rest, Dict.update(parsed, key, [value], &([value | &1]))}
+        {:ok, rest, Dict.update(parsed, key, [value], &(&1 ++ [value]))}
     end
   end
   defp apply_action({:append_const, const, key}, args, _key, parsed, _parser) do

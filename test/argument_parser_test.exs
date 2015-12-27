@@ -1,15 +1,16 @@
-defmodule ArgumentParserTest do
+defmodule APTest do
   use ExUnit.Case
-  doctest ArgumentParser
+  alias ArgumentParser, as: AP
+  doctest AP
 
   test "positional" do
-    parser = ArgumentParser.new(positional: [[:foo]])
-    assert(ArgumentParser.parse(parser, ["bar"]) == {:ok, %{foo: "bar"}})
+    parser = AP.new(positional: [[:foo]])
+    assert(AP.parse(parser, ["bar"]) == {:ok, %{foo: "bar"}})
   end
 
   test "flags" do
-    parser = ArgumentParser.new(flags: [[:foo, alias: :f], [:bar, alias: :b]])
-    {:ok, parsed} = ArgumentParser.parse(parser, ~w[-f baz --bar biz])
+    parser = AP.new(flags: [[:foo, alias: :f], [:bar, alias: :b]])
+    {:ok, parsed} = AP.parse(parser, ~w[-f baz --bar biz])
     assert(parsed == %{foo: "baz", bar: "biz"})
   end
 
@@ -19,26 +20,26 @@ defmodule ArgumentParserTest do
       [:star,   action: {:store, :*}],
       [:plus,   action: {:store, :+}],
       [:remain, action: {:store, :remainder}]]
-    parser = ArgumentParser.new(flags: flags)
+    parser = AP.new(flags: flags)
 
-    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--three baz bar biz])
-    assert(parsed == %{three: ["baz", "bar", "biz"]})
+    {:ok, parsed} = AP.parse(parser, ~w[--three baz bar biz])
+    assert(parsed == %{three: ["baz", "bar", "biz"], star: []})
 
-    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--star baz bar])
+    {:ok, parsed} = AP.parse(parser, ~w[--star baz bar])
     assert(parsed == %{star: ["baz", "bar"]})
 
-    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--plus baz bar])
-    assert(parsed == %{plus: ["baz", "bar"]})
+    {:ok, parsed} = AP.parse(parser, ~w[--plus baz bar])
+    assert(parsed == %{plus: ["baz", "bar"], star: []})
 
-    {:ok, parsed} = ArgumentParser.parse(parser, ~w[--star one --remain two --plus three])
+    {:ok, parsed} = AP.parse(parser, ~w[--star one --remain two --plus three])
     assert(parsed == %{star: ["one"], remain: ["two", "--plus", "three"]})
   end
 
   test "convert" do
     args = [[:hex,   action: {:store, &String.to_integer(&1, 16)}],
             [:atoms, action: {:store, :*, &String.to_atom/1}]]
-    parser = ArgumentParser.new(positional: args)
-    {:ok, parsed} = ArgumentParser.parse(parser, ~w[539 one two])
+    parser = AP.new(positional: args)
+    {:ok, parsed} = AP.parse(parser, ~w[539 one two])
     assert(parsed == %{hex: 1337, atoms: [:one, :two]})
   end
 
@@ -50,8 +51,8 @@ defmodule ArgumentParserTest do
       [:store_true_unset,  alias: :x, action: :store_true],
       [:store_false_unset, alias: :y, action: :store_false],
       [:store_const_unset, alias: :z, action: {:store_const, :no}]]
-    parser = ArgumentParser.new(flags: flags)
-    {:ok, parsed} = ArgumentParser.parse(parser, ["-tcf"])
+    parser = AP.new(flags: flags)
+    {:ok, parsed} = AP.parse(parser, ["-tcf"])
     assert(parsed == %{store_true_set:    true,
                        store_true_unset:  false,
                        store_false_set:   false,
@@ -60,14 +61,29 @@ defmodule ArgumentParserTest do
   end
 
   test "default" do
-    parser = ArgumentParser.new(flags: [[:foo, default: :barbeque]])
-    assert(ArgumentParser.parse(parser, []) == {:ok, %{foo: :barbeque}})
+    parser = AP.new(flags: [[:foo, default: :barbeque]])
+    assert(AP.parse(parser, []) == {:ok, %{foo: :barbeque}})
   end
 
   test "count" do
-    parser = ArgumentParser.new(flags: [[:count, alias: :c, action: :count]])
-    assert(ArgumentParser.parse(parser, []) == {:ok, %{count: 0}})
-    assert(ArgumentParser.parse(parser, ["--count"]) == {:ok, %{count: 1}})
-    assert(ArgumentParser.parse(parser, ["-ccc"]) == {:ok, %{count: 3}})
+    parser = AP.new(flags: [[:count, alias: :c, action: :count]])
+    assert(AP.parse(parser, []) == {:ok, %{count: 0}})
+    assert(AP.parse(parser, ["--count"]) == {:ok, %{count: 1}})
+    assert(AP.parse(parser, ["-ccc"]) == {:ok, %{count: 3}})
+  end
+
+  test "append" do
+    ap = AP.new() |> AP.add_flag(:a, action: :append)
+    {:ok, res} = AP.parse(ap, [])
+    assert res.a == []
+    {:ok, res} = AP.parse(ap, ~w(--a 1 --a 2))
+    assert res.a == ["1", "2"]
+  end
+
+  test "append convert" do
+    {:ok, res} = AP.new() |>
+      AP.add_flag(:a, action: {:append, &String.to_atom/1}) |>
+      AP.parse(~w(--a foo --a bar))
+    assert res.a == [:foo, :bar]
   end
 end

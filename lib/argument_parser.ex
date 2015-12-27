@@ -84,7 +84,7 @@ defmodule ArgumentParser do
       ...>   ArgumentParser.add_flag(:apnd, action: :append) |>
       ...>   ArgumentParser.add_arg(:star, action: {:store, :*}) |>
       ...>   ArgumentParser.parse(~w[--apnd foo one two --apnd bar])
-      {:ok, %{apnd: ["bar", "foo"], star: ["one", "two"]}}
+      {:ok, %{apnd: ["foo", "bar"], star: ["one", "two"]}}
 
   ### nargs <a name="nargs"></a>
 
