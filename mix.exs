@@ -3,7 +3,7 @@ defmodule ArgumentParser.Mixfile do
 
   def project do
     [app: :argument_parser,
-     version: "0.1.0",
+     version: "0.1.1",
      elixir: "~> 1.1",
      package: package,
      name: "ArgumentParser",

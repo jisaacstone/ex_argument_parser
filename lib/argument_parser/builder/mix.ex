@@ -29,6 +29,7 @@ defmodule ArgumentParser.Builder.Mix do
       unquote(ArgumentParser.Builder.setup(opts))
       @behaviour ArgumentParser.Builder.Mix
       
+      @doc :false
       def run(args) do
         {:ok, parsed} = parse(args)
         main(parsed)

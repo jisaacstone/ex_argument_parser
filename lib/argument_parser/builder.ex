@@ -24,6 +24,10 @@ defmodule ArgumentParser.Builder do
   If `:description` is not passed the `@shortdoc` or `@moduledoc` will be used
   if present.
 
+  If no `@moduledoc` is defined for the module then the help message for the
+  argument parser will be set as the `@moduledoc`. To disable this behaviour
+  explicitly use `@moduledoc :false`.
+
   Example:
 
       defmodule Script.Example do
@@ -70,21 +74,26 @@ defmodule ArgumentParser.Builder do
     args = attr.(:arg)
     flags = attr.(:flag)
     opts = attr.(:argparse_opts)
+    moddoc = attr.(:moduledoc)
     desc = cond do
       Dict.has_key?(opts, :description) -> opts[:description]
       String.valid?(sd = attr.(:shortdoc)) -> sd
-      String.valid?(md = attr.(:moduledoc)) -> md
+      String.valid?(moddoc) -> moddoc
       true -> ""
     end
 
     parser = opts |>
       Dict.merge(flags: flags, positional: args, description: desc) |>
-      ArgumentParser.new() |>
-      Macro.escape()
+      ArgumentParser.new()
+
+    if moddoc == nil do
+      Module.put_attribute(env.module, :moduledoc,
+        {env.line, ArgumentParser.print_help(parser)})
+    end
 
     quote do
       defp parse(arguments, exit \\ :true) do
-        ArgumentParser.parse(unquote(parser), arguments, exit)
+        ArgumentParser.parse(unquote(Macro.escape(parser)), arguments, exit)
       end
     end
   end
