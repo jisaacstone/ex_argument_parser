@@ -71,19 +71,4 @@ defmodule APTest do
     assert(AP.parse(parser, ["--count"]) == {:ok, %{count: 1}})
     assert(AP.parse(parser, ["-ccc"]) == {:ok, %{count: 3}})
   end
-
-  test "append" do
-    ap = AP.new() |> AP.add_flag(:a, action: :append)
-    {:ok, res} = AP.parse(ap, [])
-    assert res.a == []
-    {:ok, res} = AP.parse(ap, ~w(--a 1 --a 2))
-    assert res.a == ["1", "2"]
-  end
-
-  test "append convert" do
-    {:ok, res} = AP.new() |>
-      AP.add_flag(:a, action: {:append, &String.to_atom/1}) |>
-      AP.parse(~w(--a foo --a bar))
-    assert res.a == [:foo, :bar]
-  end
 end

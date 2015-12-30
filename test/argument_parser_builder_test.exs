@@ -27,12 +27,12 @@ defmodule ArgumentParser.Builder.Test do
 
   test "escript" do
     defmodule T.Escript do
-      use ArgumentParser.Builder.Escript, prefix_char: ?7
+      use ArgumentParser.Builder.Escript
       @flag [:goop, alias: :g]
 
       def run(parsed), do: parsed.goop
     end
 
-    assert T.Escript.main(["7g--"]) == "--"
+    assert T.Escript.main(["-g--"]) == "--"
   end
 end

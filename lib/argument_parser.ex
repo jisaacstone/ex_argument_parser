@@ -10,7 +10,6 @@ defmodule ArgumentParser do
       :positional  | A list of Positional Arguments
       :description | A string to print before generated help
       :epilog      | A string to print after generated help
-      :prefix_char | Char preceding flag arguments. Default `-`
       :add_help    | Print help when -h or --help is passed. Default true
       :strict      | Throw an error when an unexpected argument is found. Default false
 
@@ -36,7 +35,6 @@ defmodule ArgumentParser do
 
   ### Flag Arguments ###
 
-  Flag arguments are defined with a prefix char. The default is `-`.
   Flags can be either long form `--flag` or single character alias `-f`
   Alias flags can be grouped: `-flag` == `-f -l -a -g`
   Grouping only works if flags take no args.
@@ -56,23 +54,19 @@ defmodule ArgumentParser do
   
   Valid actions are
   
-      :store [default]           | collects one argument and sets as string
       {:store, nargs}            | collects [nargs] arguments and sets as string
       {:store, convert}          | collects one argument and applys [convert] to it
       {:store, nargs, convert}   | collects [nargs] arguments and applys [convert] to them
       {:store_const, term}       | sets value to [term] when flag is present
       :store_true                | sets value to true when flag is present
       :store_false               | sets value to false when flag is present
-      :append                    | same as `:store`, but can use multiple times and stores as list
-      {:append, nargs}           | ''
-      {:append, convert}         | ''
-      {:append, nargs, convert}  | ''
-      {:append_const, term, atom}| ''
       :count                     | stores a count of # of times the flag is used
       :help                      | print help and exit
       {:version, version_sting}  | print version_sting and exit      
 
-  examples:
+  The default action is `{:store, 1}`.
+
+  Examples:
 
       iex> ArgumentParser.new(flags: [[:tru, action: :store_true],
       ...>                            [:fls, action: :store_false],
@@ -81,10 +75,10 @@ defmodule ArgumentParser do
       {:ok, %{tru: true, fls: false, cst: Foo}}
 
       iex> ArgumentParser.new() |>
-      ...>   ArgumentParser.add_flag(:apnd, action: :append) |>
+      ...>   ArgumentParser.add_flag(:cnt, action: :count) |>
       ...>   ArgumentParser.add_arg(:star, action: {:store, :*}) |>
-      ...>   ArgumentParser.parse(~w[--apnd foo one two --apnd bar])
-      {:ok, %{apnd: ["foo", "bar"], star: ["one", "two"]}}
+      ...>   ArgumentParser.parse(~w[--cnt one two --cnt])
+      {:ok, %{cnt: 2, star: ["one", "two"]}}
 
   ### nargs <a name="nargs"></a>
 
@@ -96,13 +90,13 @@ defmodule ArgumentParser do
       :'?'                | collect one argument if there is any left
       :remainder          | collect all remaining args regardless of type
   
-  actions `:store` and `:append` are the same as `{:store, 1}` and `{:append, 1}`
+  `:store` is the same as `{:store, 1}`
 
       iex> ArgumentParser.new() |> 
-      ...>   ArgumentParser.add_flag(:apnd, action: :append) |>
+      ...>   ArgumentParser.add_flag(:star, action: {:store, :*}) |>
       ...>   ArgumentParser.add_arg(:rmdr, action: {:store, :remainder}) |>
-      ...>   ArgumentParser.parse(~w[--apnd foo one two --apnd bar])
-      {:ok, %{apnd: ["foo"], rmdr: ["one", "two", "--apnd", "bar"]}}
+      ...>   ArgumentParser.parse(~w[one two --apnd bar])
+      {:ok, %{star: [], rmdr: ["one", "two", "--apnd", "bar"]}}
 
   ### convert  <a name="convert"></a>
 
@@ -149,7 +143,6 @@ defmodule ArgumentParser do
     positional: [],
     description: "",
     epilog: "",
-    prefix_char: ?-,
     add_help: true,
     strict: true
 
@@ -158,7 +151,6 @@ defmodule ArgumentParser do
     positional: [argument],
     description: String.t,
     epilog: String.t,
-    prefix_char: char,
     add_help: boolean,
     strict: boolean}
 
@@ -181,11 +173,6 @@ defmodule ArgumentParser do
     {:store_const, term} |
     :store_true |
     :store_false |
-    :append |
-    {:append, nargs} |
-    {:append, convert} |
-    {:append, nargs, convert} |
-    {:append_const, term, atom} |
     :count |
     :help |
     {:version, String.t}
@@ -201,8 +188,7 @@ defmodule ArgumentParser do
 
       iex> ArgumentParser.new(description: "Lorem Ipsum")
       %ArgumentParser{description: "Lorem Ipsum", add_help: :true,
-                      prefix_char: ?-, epilog: "",
-                      flags: [], positional: []}
+                      epilog: "", flags: [], positional: []}
   """
   @spec new(Dict.t) :: t
   def new(arguments \\ []) do
@@ -216,8 +202,7 @@ defmodule ArgumentParser do
 
       iex> ArgumentParser.new(description: "Lorem Ipsum") |>
       ...>   ArgumentParser.add_flag(:foo, required: :false, action: :store_true)
-      %ArgumentParser{description: "Lorem Ipsum", add_help: :true,
-                      prefix_char: ?-, epilog: "",
+      %ArgumentParser{description: "Lorem Ipsum", add_help: :true, epilog: "",
                       flags: [[:foo, required: :false, action: :store_true]],
                       positional: []}
   """
@@ -237,8 +222,7 @@ defmodule ArgumentParser do
       iex> ArgumentParser.new(description: "Lorem Ipsum") |>
       ...>   ArgumentParser.add_arg(:foo, required: :false, action: :store_true)
       %ArgumentParser{description: "Lorem Ipsum", add_help: :true,
-                      prefix_char: ?-, epilog: "",
-                      flags: [],
+                      epilog: "", flags: [],
                       positional: [[:foo, required: :false, action: :store_true]]}
   """
   def add_arg(parser, [name | _] = arg) when is_atom(name) do

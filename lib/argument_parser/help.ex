@@ -23,7 +23,7 @@ defmodule ArgumentParser.Help do
       "\n",
       Enum.map(parser.positional, &print_positional/1),
       "\nOptions:\n",
-      Enum.map(flags, &print_flag(&1, parser.prefix_char)) ]
+      Enum.map(flags, &print_flag/1) ]
   end
 
   defp print_position_head([]) do
@@ -42,7 +42,7 @@ defmodule ArgumentParser.Help do
     [text, print_position_head(rest)]
   end
 
-  defp print_metavars(atom, mv) when atom in [:store, :append] do
+  defp print_metavars(:store, mv) do
     mv
   end
   defp print_metavars(t, mv) when is_tuple(t) do
@@ -68,11 +68,9 @@ defmodule ArgumentParser.Help do
     ["\t#{name}", print_arg_help(options)]
   end
 
-  defp print_flag([name | options], prefix) do
-    [ <<?\t, prefix, prefix>>, Atom.to_string(name),
-      if alias = Keyword.get(options, :alias) do
-        <<?\s, prefix>> <> Atom.to_string(alias)
-      else "" end,
+  defp print_flag([name | options]) do
+    [ "\t--#{name}",
+      (if alias = options[:alias], do: " -#{alias}", else: ""),
       print_arg_help(options) ]
   end
 

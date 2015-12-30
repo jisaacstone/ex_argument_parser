@@ -8,9 +8,8 @@ defmodule ArgumentParser.Parser do
 
   defmacrop list_action?(action) do
     quote do
-      (unquote(action) == :append) or is_tuple(unquote(action)) and
-      (:erlang.element(1, unquote(action)) == :append or
-       :erlang.element(2, unquote(action)) == :*)
+      is_tuple(unquote(action)) and
+       :erlang.element(2, unquote(action)) == :*
     end
   end
 
@@ -68,41 +67,26 @@ defmodule ArgumentParser.Parser do
   defp key_for([name | _]) when is_atom(name) do
     name
   end
-  defp key_for([flags | _]) when is_list(flags) do
-    case Enum.max_by(flags, &String.length/1) do
-      <<pc, pc, arg :: binary>> ->
-        String.to_atom(arg)
-      <<_pc, arg :: binary>> ->
-        String.to_atom(arg)
-    end
-  end
 
   @spec parse([String.t], AP.t, Map.t) :: result
   defp parse([], _parser, parsed) do
     {:ok, parsed}
   end
-  # -h
-  defp parse([<<pc, ?h>> | parser],
-             %{add_help: true, prefix_char: pc} = parser, _) do
-    {:message, AP.print_help(parser)}
-  end
   # --help
-  defp parse([<<pc, pc, ?h, ?e, ?l, ?p>> | _],
-             %{add_help: true, prefix_char: pc} = parser, _) do
+  defp parse([h | _], %{add_help: true} = parser, _)
+  when h in ["-h", "--help"] do
     {:message, AP.print_help(parser)}
   end
   # --[flag]
-  defp parse([<<pc, pc, arg :: binary>> | rest],
-             %{prefix_char: pc} = parser,
-             parsed) do
+  defp parse([<<?-, ?-, arg :: binary>> | rest],
+             parser, parsed) do
     get_flag_by_name(String.to_atom(arg), parser.flags, parser.strict) |>
       apply_argument(rest, parsed, parser) |>
       check_if_done(parser)
   end
   # -[alias]+ (e.g. -aux -> -a -u -x)
-  defp parse([<<pc, aliased :: binary>> | rest],
-             %{prefix_char: pc} = parser,
-             parsed) do
+  defp parse([<<?-, aliased :: binary>> | rest],
+             parser, parsed) do
     unalias_and_apply(aliased, rest, parsed, parser) |>
       check_if_done(parser)
   end
@@ -152,11 +136,6 @@ defmodule ArgumentParser.Parser do
     result
   end
 
-  defp apply_action(action, _, key, %{key: _}, _)
-  when (is_atom(action) and action != :append)
-  or (is_tuple(action) and not elem(action, 0) in [:append, :append_const]) do
-    {:error, "duplicate key #{key}"}
-  end
   defp apply_action(:store, [head | args], key, parsed, _parser) do
     {:ok, args, Dict.put(parsed, key, head)}
   end
@@ -166,12 +145,12 @@ defmodule ArgumentParser.Parser do
   end
   defp apply_action({:store, n}, args, key, parsed, parser)
   when is_number(n) or n in @narg_atoms do
-    {value, rest} = fetch_nargs(args, n, parser)
+    {value, rest} = fetch_nargs(args, n)
     {:ok, rest, Dict.put_new(parsed, key, value)}
   end
   defp apply_action({:store, n, f}, args, key, parsed, parser)
   when is_function(f) and (is_number(n) or n in @narg_atoms) do
-    {value, rest} = fetch_nargs(args, n, parser)
+    {value, rest} = fetch_nargs(args, n)
     newvalue = if is_list(value) do
       Enum.map(value, f)
     else
@@ -187,33 +166,6 @@ defmodule ArgumentParser.Parser do
   end
   defp apply_action({:store_const, const}, args, key, parsed, _parser) do
     {:ok, args, Dict.put_new(parsed, key, const)}
-  end
-  defp apply_action(:append, [head | args], key, parsed, _parser) do
-    {:ok, args, Dict.update(parsed, key, [head], &(&1 ++ [head]))}
-  end
-  defp apply_action({:append, f}, [head | args], key, parsed, _parser)
-  when is_function(f) do
-    value = f.(head)
-    {:ok, args, Dict.update(parsed, key, [value], &(&1 ++ [value]))}
-  end
-  defp apply_action({:append, n}, args, key, parsed, parser)
-  when is_number(n) or n in @narg_atoms do
-    case fetch_nargs(args, n, parser) do
-      {:error, reason} -> {:error, reason}
-      {value, rest} ->
-        {:ok, rest, Dict.update(parsed, key, [value], &(&1 ++ [value]))}
-    end
-  end
-  defp apply_action({:append, n, f}, args, key, parsed, parser)
-  when is_function(f) and (is_number(n) or n in @narg_atoms) do
-    case fetch_nargs(args, n, parser) do
-      {:error, reason} -> {:error, reason}
-      {value, rest} ->
-        {:ok, rest, Dict.update(parsed, key, [value], &(&1 ++ [value]))}
-    end
-  end
-  defp apply_action({:append_const, const, key}, args, _key, parsed, _parser) do
-    {:ok, args, Dict.update(parsed, key, [const], &([const | &1]))}
   end
   defp apply_action(:count, args, key, parsed, _parser) do
     {:ok, args, Dict.update(parsed, key, 1, &(&1 + 1))}
@@ -264,24 +216,23 @@ defmodule ArgumentParser.Parser do
     end
   end
 
-
-  defp fetch_nargs(args, n, _parser) when is_number(n) do
+  defp fetch_nargs(args, n) when is_number(n) do
     Enum.split(args, n)
   end
-  defp fetch_nargs(args, :remainder, _parser) do
+  defp fetch_nargs(args, :remainder) do
     {args, []}
   end
-  defp fetch_nargs(args, :*, parser) do
-    Enum.split_while(args, &(not flag?(&1, parser.prefix_char)))
+  defp fetch_nargs(args, :*) do
+    Enum.split_while(args, &(not flag?(&1)))
   end
-  defp fetch_nargs(args, :+, parser) do
-    case Enum.split_while(args, &(not flag?(&1, parser.prefix_char))) do
+  defp fetch_nargs(args, :+) do
+    case Enum.split_while(args, &(not flag?(&1))) do
       {[], _} -> {:error, "Missing value"}
       result  -> result
     end
   end
-  defp fetch_nargs([head | tail] = args, :'?', parser) do
-    if flag?(head, parser.prefix_char) do
+  defp fetch_nargs([head | tail] = args, :'?') do
+    if flag?(head) do
       {[], args}
     else
       {head, tail}
@@ -291,10 +242,10 @@ defmodule ArgumentParser.Parser do
     {[], []}
   end
 
-  defp flag?(<<pc, _ :: binary>>, pc) do
+  defp flag?(<<?-, _ :: binary>>) do
     true
   end
-  defp flag?(_, _) do
+  defp flag?(_) do
     false
   end
 end
