@@ -226,7 +226,7 @@ defmodule ArgumentParser do
                       positional: [[:foo, required: :false, action: :store_true]]}
   """
   def add_arg(parser, [name | _] = arg) when is_atom(name) do
-    args = [arg | parser.positional]
+    args = parser.positional ++ [arg]
     %{parser | positional: args}
   end
   def add_arg(parser, name, opts) when is_atom(name) and is_list(opts) do

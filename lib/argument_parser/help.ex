@@ -18,7 +18,7 @@ defmodule ArgumentParser.Help do
       parser.flags
     end
 
-    [ "Usage: ",
+    [ "Usage:",
       print_position_head(parser.positional),
       "\n",
       Enum.map(parser.positional, &print_positional/1),
@@ -29,21 +29,15 @@ defmodule ArgumentParser.Help do
   defp print_position_head([]) do
     []
   end
-  defp print_position_head([[name_a | options] | rest]) do
-    name = Atom.to_string(name_a)
+  defp print_position_head([[name | options] | rest]) do
     mv = print_metavars(
       Keyword.get(options, :action, :store),
-      Keyword.get(options, :metavar, String.upcase(name)))
-    text = if options[:required] do
-      [name, mv, " "]
-    else
-      ["[", name, mv, "] "]
-    end
-    [text, print_position_head(rest)]
+      Keyword.get(options, :metavar, Atom.to_string(name)))
+    [mv | print_position_head(rest)]
   end
 
   defp print_metavars(:store, mv) do
-    mv
+    [?\ , mv]
   end
   defp print_metavars(t, mv) when is_tuple(t) do
     print_metavars(elem(t, 1), mv)
@@ -57,7 +51,8 @@ defmodule ArgumentParser.Help do
   defp print_metavars(:+, mv) do
     " #{mv} [#{mv} ...]"
   end
-  defp print_metavars(:'?', mv) do
+  defp print_metavars(action, mv)
+  when action in [:'?', :store_true, :store_false, :store_const] do
     " [#{mv}]"
   end
   defp print_metavars(_, _) do

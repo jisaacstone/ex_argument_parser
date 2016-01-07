@@ -18,4 +18,13 @@ defmodule ArgumentParser.Help.Test do
       AP.print_help()
     assert String.contains?("#{msg}", "do a foo"), msg
   end
+
+  test "position head" do
+    msg = AP.new() |>
+      AP.add_arg(:foo, []) |>
+      AP.add_arg(:bar, action: :store_true) |>
+      AP.add_arg(:buzz, action: {:store, :*}) |>
+      AP.print_help()
+    assert String.contains?(msg, "Usage: foo [bar] [buzz ...]\n"), msg
+  end
 end

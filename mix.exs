@@ -23,7 +23,6 @@ defmodule ArgumentParser.Mixfile do
   end
 
   def deps do
-    [ {:dialyze, "~> 0.2", only: :dev},
-      {:readme_md_doc, "~> 0.1", only: :dev} ]
+    [ {:dialyze, "~> 0.2", only: :dev} ]
   end
 end

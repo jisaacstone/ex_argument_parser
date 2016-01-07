@@ -6,12 +6,10 @@ defmodule ArgumentParser.Parser do
 
   @type result :: {:ok, Map.t} | {:error, term} | {:message, binary}
 
-  defmacrop list_action?(action) do
-    quote do
+  defmacrop list_action?(action), do:
+    quote do:
       is_tuple(unquote(action)) and
        :erlang.element(2, unquote(action)) == :*
-    end
-  end
 
   @doc :false
   @spec parse([String.t], AP.t) :: result
