@@ -27,4 +27,19 @@ defmodule ArgumentParser.Help.Test do
       AP.print_help()
     assert String.contains?(msg, "Usage: foo [bar] [buzz ...]\n"), msg
   end
+
+  test "position head macro" do
+    defmodule PHM do
+      use ArgumentParser.Builder
+      @arg [:foo]
+      @arg [:bar, action: :store_false]
+      @arg [:buzz, action: {:store, :+}]
+      def help() do
+        {:message, msg} = parse(["-h"], :false)
+        msg
+      end
+    end
+    msg = PHM.help()
+    assert String.contains?(msg, "Usage: foo [bar] buzz [buzz ...]\n"), msg
+  end
 end

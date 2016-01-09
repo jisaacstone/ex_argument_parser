@@ -71,8 +71,8 @@ defmodule ArgumentParser.Builder do
   @doc :false
   defmacro __before_compile__(env) do
     attr = &Module.get_attribute(env.module, &1)
-    args = attr.(:arg)
-    flags = attr.(:flag)
+    args = attr.(:arg) |> Enum.reverse()
+    flags = attr.(:flag) |> Enum.reverse()
     opts = attr.(:argparse_opts)
     moddoc = attr.(:moduledoc)
     desc = cond do
