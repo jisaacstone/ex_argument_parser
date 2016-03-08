@@ -141,12 +141,12 @@ defmodule ArgumentParser.Parser do
   when is_function(f) do
     {:ok, args, Dict.put(parsed, key, f.(head))}
   end
-  defp apply_action({:store, n}, args, key, parsed, parser)
+  defp apply_action({:store, n}, args, key, parsed, _parser)
   when is_number(n) or n in @narg_atoms do
     {value, rest} = fetch_nargs(args, n)
     {:ok, rest, Dict.put_new(parsed, key, value)}
   end
-  defp apply_action({:store, n, f}, args, key, parsed, parser)
+  defp apply_action({:store, n, f}, args, key, parsed, _parser)
   when is_function(f) and (is_number(n) or n in @narg_atoms) do
     {value, rest} = fetch_nargs(args, n)
     newvalue = if is_list(value) do
@@ -236,7 +236,7 @@ defmodule ArgumentParser.Parser do
       {head, tail}
     end
   end
-  defp fetch_nargs([], :'?', _) do
+  defp fetch_nargs([], :'?') do
     {[], []}
   end
 
