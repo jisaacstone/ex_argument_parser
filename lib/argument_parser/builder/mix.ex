@@ -23,7 +23,7 @@ defmodule ArgumentParser.Builder.Mix do
   When `run` is called the arguments will be parsed and the result passed to
   `main`
   """
-  @callback main(Map.t) :: any
+  @callback main(map()) :: any
   defmacro __using__(opts) do
     quote do
       unquote(ArgumentParser.Builder.setup(opts))

@@ -25,7 +25,7 @@ defmodule ArgumentParser.Builder.Escript do
   When `main` is called the arguments will be parsed and the result passed to
   `run`
   """
-  @callback run(Map.t) :: any
+  @callback run(map()) :: any
   defmacro __using__(opts) do
     quote do
       unquote(ArgumentParser.Builder.setup(opts))

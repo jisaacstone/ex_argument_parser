@@ -273,8 +273,8 @@ Will create a private `parse` function.
 The first argument to the parser function should be a list of binarys.
 the second option is the `print_and_exit` flag, which defaults to `:true`.
 
-    parse([binary], :true) :: {:ok, Map.t}
-    parse([binary], :false) :: {:ok, Map.t} | {:error, term} | {:message,
+    parse([binary], :true) :: {:ok, map()}
+    parse([binary], :false) :: {:ok, map()} | {:error, term} | {:message,
       iodata}
 
 When the `print_and_exit` flag is `:true` messages and errors will be printed

@@ -4,7 +4,7 @@ defmodule ArgumentParser.Parser do
 
   @narg_atoms [:'?', :*, :+, :remainder]
 
-  @type result :: {:ok, Map.t} | {:error, term} | {:message, binary}
+  @type result :: {:ok, map()} | {:error, term} | {:message, binary}
 
   defmacrop list_action?(action), do:
     quote do:
@@ -66,7 +66,7 @@ defmodule ArgumentParser.Parser do
     name
   end
 
-  @spec parse([String.t], AP.t, Map.t) :: result
+  @spec parse([String.t], AP.t, map()) :: result
   defp parse([], _parser, parsed) do
     {:ok, parsed}
   end
