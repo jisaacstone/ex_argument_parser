@@ -264,7 +264,8 @@ defmodule ArgumentParser do
   """
 
   @spec parse(t, [String.t], boolean) :: Parser.result
-  def parse(parser, args, print_and_exit \\ :true) do
+  def parse(parser, args, print_and_exit \\ :true)
+  when is_list(args) and is_boolean(print_and_exit) do
     Parser.parse(args, parser) |>
         handle(print_and_exit, parser)
   end
@@ -278,7 +279,7 @@ defmodule ArgumentParser do
   end
   defp handle({:error, reason}, :true, parser) do
     IO.puts("error: #{inspect(reason)}")
-    IO.puts(print_help(parser))
+    IO.puts(Help.describe_short(parser))
     exit(:normal)
   end
   defp handle(result, :false, _) do
