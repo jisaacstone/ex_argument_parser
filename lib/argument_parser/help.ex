@@ -10,6 +10,27 @@ defmodule ArgumentParser.Help do
     """ |> String.strip()
   end
 
+  @doc :false
+  def describe_short(%ArgumentParser{} = parser) do
+    ["Usage:", short_options(parser), format_position_head(parser.positional)]
+  end
+  
+  defp short_options(%{flags: flags}) do
+    case Enum.reduce(flags, {[], []}, &sort_by_alias/2) do
+      {[], []} -> []
+      {[], names} -> [" ", names]
+      {aliases, []} -> [" -", aliases]
+      {aliases, names} -> [" -", aliases, " ", names]
+    end
+  end
+
+  defp sort_by_alias([name | opts], {aliases, names}) do
+    case Keyword.fetch(opts, :alias) do
+      {:ok, a} -> {[Atom.to_string(a)|aliases], names}
+      :error -> {aliases, ["--" <> Atom.to_string(name)|names]}
+    end
+  end
+
   defp format_body(parser) do
     flags = if parser.add_help do
       parser.flags ++ [[:help, alias: :h, action: :help,

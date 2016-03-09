@@ -58,4 +58,25 @@ defmodule ArgumentParser.Help.Test do
     contains(msg, "  foo  fubar\n")
     contains(msg, "  -b --bar")
   end
+
+  test "short message" do
+    parser = AP.new(description: "NOPE") |>
+      AP.add_arg(:foo, help: "NOPE") |>
+      AP.add_flag(:goo, help: "NOPE")
+    description = AP.Help.describe_short(parser) |> List.to_string()
+    refute String.contains?(description, "NOPE"), description
+    assert String.contains?(description, "--goo"), description
+    assert String.contains?(description, "foo"), description
+  end
+
+  test "short message flag combine" do
+    parser = AP.new() |>
+      AP.add_flag(:ok, alias: :k) |>
+      AP.add_flag(:hat, alias: :h) |>
+      AP.add_flag(:cat, alias: :c) |>
+      AP.add_flag([:what])
+    description = AP.Help.describe_short(parser) |> List.to_string()
+    assert String.contains?(description, "-khc"), description
+    assert String.contains?(description, "--what"), description
+  end
 end
